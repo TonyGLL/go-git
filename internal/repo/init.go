@@ -42,6 +42,14 @@ func InitRepo(path string) error {
 		return fmt.Errorf("error creating HEAD file: %w", err)
 	}
 
+	// Create initial files like HEAD
+	mainPath := filepath.Join(repoPath, "refs/heads/main")
+	// By default, HEAD points to the 'main' branch (or 'master')
+	mainContent := []byte("")
+	if err := os.WriteFile(mainPath, mainContent, 0644); err != nil {
+		return fmt.Errorf("error creating main file: %w", err)
+	}
+
 	fmt.Println("Repository initialized successfully!")
 	return nil
 }

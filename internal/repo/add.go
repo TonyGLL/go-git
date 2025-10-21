@@ -2,19 +2,13 @@ package repo
 
 import (
 	"bufio"
-	"bytes"
-	"crypto/sha1"
 	"fmt"
 	"log"
 	"os"
 	"path/filepath"
 	"strings"
-)
 
-var (
-	repoPath    = filepath.Join(".", ".gogit")
-	objectsPath = filepath.Join(repoPath, "objects")
-	indexPath   = filepath.Join(repoPath, "index")
+	"github.com/TonyGLL/go-git/pkg"
 )
 
 func AddFile(filePath string) error {
@@ -23,7 +17,7 @@ func AddFile(filePath string) error {
 		log.Fatalf("Error reading file: %v", err)
 	}
 
-	blobHash, buffer, err := hasObject(content)
+	blobHash, buffer, err := pkg.HashObject(content)
 	if err != nil {
 		return fmt.Errorf("error hashing file: %w", err)
 	}
@@ -31,47 +25,40 @@ func AddFile(filePath string) error {
 	firstTwo := blobHash[:2]
 	rest := blobHash[2:]
 
-	// Create necessary directories
-	dirs := []string{firstTwo}
-	for _, dir := range dirs {
-		if err := os.MkdirAll(filepath.Join(objectsPath, dir), 0755); err != nil {
-			return fmt.Errorf("error creating directory %s: %w", dir, err)
+	_, err = os.Open(fmt.Sprintf("%s/%s/%s", pkg.ObjectsPath, firstTwo, rest))
+	if os.IsNotExist(err) {
+		// Create necessary directories
+		dirs := []string{firstTwo}
+		for _, dir := range dirs {
+			if err := os.MkdirAll(filepath.Join(pkg.ObjectsPath, dir), 0755); err != nil {
+				return fmt.Errorf("error creating directory %s: %w", dir, err)
+			}
 		}
+
+		// Create initial files like newFile
+		newFilePath := filepath.Join(fmt.Sprintf("%s/%s", pkg.ObjectsPath, firstTwo), rest)
+		if err := os.WriteFile(newFilePath, buffer.Bytes(), 0644); err != nil {
+			return fmt.Errorf("error creating HEAD file: %w", err)
+		}
+
+		if err := searchRewriteIndex(blobHash, filePath); err != nil {
+			return fmt.Errorf("error updating INDEX file: %w", err)
+		}
+
+		return nil
 	}
 
-	// Create initial files like newFile
-	newFilePath := filepath.Join(fmt.Sprintf("%s/%s", objectsPath, firstTwo), rest)
-	if err := os.WriteFile(newFilePath, buffer.Bytes(), 0644); err != nil {
-		return fmt.Errorf("error creating HEAD file: %w", err)
-	}
-
-	if err := searchRewriteIndex(blobHash, filePath); err != nil {
-		return fmt.Errorf("error updating INDEX file: %w", err)
+	err = os.WriteFile(pkg.IndexPath, []byte(""), 0644)
+	if err != nil {
+		return fmt.Errorf("error writing to file %s: %w", pkg.IndexPath, err)
 	}
 
 	return nil
 }
 
-func hasObject(content []byte) (string, bytes.Buffer, error) {
-	// 1. Create a buffer to build the Git blob object.
-	var buffer bytes.Buffer
-	// 2. Write the blob header, including the type ("blob"), a space and the length of the content.
-	// The `len()` function in Go returns the number of bytes in the slice.
-	buffer.WriteString(fmt.Sprintf("blob %d", len(content)))
-	// 3. Write the null byte ('\0'), which separates the header from the content.
-	buffer.WriteByte(0)
-	// 4. Write the actual content (the `[]byte`).
-	buffer.Write(content)
-	// 5. Compute the SHA-1 hash of the entire byte sequence.
-	hash := sha1.Sum(buffer.Bytes())
-	// 6. Format the resulting hash as a hexadecimal string.
-	blobHash := fmt.Sprintf("%x", hash)
-	return blobHash, buffer, nil
-}
-
 func searchRewriteIndex(blobHash string, filePath string) error {
 	// 1. Open the index file for reading
-	indexContent, err := os.Open(indexPath)
+	indexContent, err := os.Open(pkg.IndexPath)
 	if err != nil {
 		log.Fatalf("Error reading file: %v", err)
 	}
@@ -110,7 +97,7 @@ func searchRewriteIndex(blobHash string, filePath string) error {
 
 	// Check for errors that occurred during scanning.
 	if err := scanner.Err(); err != nil {
-		return fmt.Errorf("error reading file %s: %w", indexPath, err)
+		return fmt.Errorf("error reading file %s: %w", pkg.IndexPath, err)
 	}
 
 	// 4. If after reading the file we didn't find the filepath, append it.
@@ -122,11 +109,11 @@ func searchRewriteIndex(blobHash string, filePath string) error {
 	// 5. Join all lines into a single string and overwrite the file.
 	output := strings.Join(lines, "\n")
 	// Add a final newline so the file ends correctly.
-	err = os.WriteFile(indexPath, []byte(output+"\n"), 0644)
+	err = os.WriteFile(pkg.IndexPath, []byte(output+"\n"), 0644)
 	if err != nil {
-		return fmt.Errorf("error writing to file %s: %w", indexPath, err)
+		return fmt.Errorf("error writing to file %s: %w", pkg.IndexPath, err)
 	}
 
-	fmt.Printf("File '%s' updated successfully.\n", indexPath)
+	fmt.Printf("File '%s' updated successfully.\n", pkg.IndexPath)
 	return nil
 }

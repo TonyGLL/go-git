@@ -56,6 +56,19 @@ var addFileCmd = &cobra.Command{
 	},
 }
 
+var commitMessage string
+var addCommitCmd = &cobra.Command{
+	Use:   "commit",
+	Short: "Add commit message to gogit repository",
+	Run: func(cmd *cobra.Command, args []string) {
+		// Here's the magic: the CLI calls the internal logic
+		if err := repo.AddCommit(&commitMessage); err != nil {
+			fmt.Fprintf(os.Stderr, "Error: %v\n", err)
+			os.Exit(1)
+		}
+	},
+}
+
 // Execute adds all child commands to the root command and sets flags appropriately.
 // This is the main function that calls main.main().
 func Execute() {
@@ -70,4 +83,7 @@ func init() {
 	// Add subcommands to the root command
 	rootCmd.AddCommand(initCmd)
 	rootCmd.AddCommand(addFileCmd)
+	rootCmd.AddCommand(addCommitCmd)
+	addCommitCmd.Flags().StringVarP(&commitMessage, "message", "m", "", "Commit message (mandatory)")
+	addCommitCmd.MarkFlagRequired("message")
 }
