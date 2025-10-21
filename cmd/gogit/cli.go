@@ -38,6 +38,24 @@ var initCmd = &cobra.Command{
 	},
 }
 
+var addFileCmd = &cobra.Command{
+	Use:   "add <file>",
+	Short: "Add file to gogit repository",
+	Args:  cobra.MaximumNArgs(1),
+	Run: func(cmd *cobra.Command, args []string) {
+		filePath := "."
+		if len(args) > 0 {
+			filePath = args[0]
+		}
+
+		// Here's the magic: the CLI calls the internal logic
+		if err := repo.AddFile(filePath); err != nil {
+			fmt.Fprintf(os.Stderr, "Error: %v\n", err)
+			os.Exit(1)
+		}
+	},
+}
+
 // Execute adds all child commands to the root command and sets flags appropriately.
 // This is the main function that calls main.main().
 func Execute() {
@@ -51,4 +69,5 @@ func Execute() {
 func init() {
 	// Add subcommands to the root command
 	rootCmd.AddCommand(initCmd)
+	rootCmd.AddCommand(addFileCmd)
 }

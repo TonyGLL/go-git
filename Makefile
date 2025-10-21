@@ -8,3 +8,6 @@ run: build
 
 init: build
 	./${APP_EXECUTABLE} init
+
+add: build
+	./${APP_EXECUTABLE} add hello.txt
