@@ -1,13 +1,10 @@
 package pkg
 
 import (
-	"bufio"
 	"bytes"
 	"crypto/sha1"
 	"fmt"
-	"os"
 	"sort"
-	"strings"
 	"time"
 )
 
@@ -96,38 +93,15 @@ func HashCommit(treeHash, parentHash, author, message string) (string, []byte, e
 }
 
 func ReadObject(hash string) error {
-	firstTwo := hash[:2]
-	rest := hash[2:]
-
-	currentObjectPath := fmt.Sprintf("%s/%s/%s", ObjectsPath, firstTwo, rest)
-
-	file, err := os.Open(currentObjectPath)
+	commit, err := ReadCommit(hash)
 	if err != nil {
 		return err
 	}
-	defer file.Close()
 
-	var currentParent string
-	scanner := bufio.NewScanner(file)
-	fmt.Printf("commit %s\n", hash)
-	for scanner.Scan() {
-		line := scanner.Text()
-		// Look for the parent prefix followed by the hash value.
-		if strings.HasPrefix(line, "parent ") {
-			// Return the text after the prefix (trim any surrounding whitespace).
-			currentParent = strings.TrimSpace(strings.TrimPrefix(line, "parent "))
-		}
+	PrintCommit(commit)
 
-		fmt.Printf("%s\n", scanner.Text())
-	}
-	fmt.Printf("\n")
-
-	if err := scanner.Err(); err != nil {
-		return err
-	}
-
-	if currentParent != "" {
-		ReadObject(currentParent)
+	if commit.Parent != "" {
+		return ReadObject(commit.Parent)
 	}
 
 	return nil
