@@ -14,7 +14,7 @@ import (
 func AddFile(filePath string) error {
 	content, err := os.ReadFile(filePath)
 	if err != nil {
-		log.Fatalf("Error reading file: %v", err)
+		return fmt.Errorf("error reading file %s: %w", filePath, err)
 	}
 
 	blobHash, buffer, err := pkg.HashObject(content)
@@ -24,33 +24,27 @@ func AddFile(filePath string) error {
 
 	firstTwo := blobHash[:2]
 	rest := blobHash[2:]
+	objectPath := filepath.Join(pkg.ObjectsPath, firstTwo, rest)
 
-	_, err = os.Open(fmt.Sprintf("%s/%s/%s", pkg.ObjectsPath, firstTwo, rest))
-	if os.IsNotExist(err) {
+	// Check if object exists. If not, create it.
+	if _, err := os.Stat(objectPath); os.IsNotExist(err) {
 		// Create necessary directories
-		dirs := []string{firstTwo}
-		for _, dir := range dirs {
-			if err := os.MkdirAll(filepath.Join(pkg.ObjectsPath, dir), 0755); err != nil {
-				return fmt.Errorf("error creating directory %s: %w", dir, err)
-			}
+		if err := os.MkdirAll(filepath.Join(pkg.ObjectsPath, firstTwo), 0755); err != nil {
+			return fmt.Errorf("error creating directory %s: %w", filepath.Join(pkg.ObjectsPath, firstTwo), err)
 		}
 
-		// Create initial files like newFile
-		newFilePath := filepath.Join(fmt.Sprintf("%s/%s", pkg.ObjectsPath, firstTwo), rest)
-		if err := os.WriteFile(newFilePath, buffer.Bytes(), 0644); err != nil {
-			return fmt.Errorf("error creating HEAD file: %w", err)
+		// Write the blob object content
+		if err := os.WriteFile(objectPath, buffer.Bytes(), 0644); err != nil {
+			return fmt.Errorf("error writing blob object to %s: %w", objectPath, err)
 		}
-
-		if err := searchRewriteIndex(blobHash, filePath); err != nil {
-			return fmt.Errorf("error updating INDEX file: %w", err)
-		}
-
-		return nil
+	} else if err != nil {
+		// An error other than "not exist" occurred
+		return fmt.Errorf("error checking object existence at %s: %w", objectPath, err)
 	}
 
-	err = os.WriteFile(pkg.IndexPath, []byte(""), 0644)
-	if err != nil {
-		return fmt.Errorf("error writing to file %s: %w", pkg.IndexPath, err)
+	// Always update the index with the file and its hash
+	if err := searchRewriteIndex(blobHash, filePath); err != nil {
+		return fmt.Errorf("error updating INDEX file: %w", err)
 	}
 
 	return nil

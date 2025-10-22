@@ -28,36 +28,52 @@ func HashObject(content []byte) (string, bytes.Buffer, error) {
 	return blobHash, buffer, nil
 }
 
-func HashCommit(parentHash, author, message string, files map[string]string) (string, []byte, error) {
+func HashTree(files map[string]string) (string, []byte, error) {
+	var contentBuffer bytes.Buffer
+
+	// To ensure a deterministic tree hash, we must sort the files by their path.
+	var paths []string
+	for path := range files {
+		paths = append(paths, path)
+	}
+	sort.Strings(paths) // Sort alphabetically.
+
+	for _, path := range paths {
+		hash := files[path]
+		// Format: <mode> <type> <hash>\t<path>
+		// For simplicity, we'll use a generic mode and type for now.
+		// Real Git uses 100644 for files, 040000 for trees.
+		fmt.Fprintf(&contentBuffer, "100644 blob %s\t%s\n", hash, path)
+	}
+
+	treeContent := contentBuffer.Bytes()
+
+	var objectBuffer bytes.Buffer
+	fmt.Fprintf(&objectBuffer, "tree %d\000", len(treeContent))
+	objectBuffer.Write(treeContent)
+
+	hashBytes := sha1.Sum(objectBuffer.Bytes())
+	treeHash := fmt.Sprintf("%x", hashBytes)
+
+	return treeHash, treeContent, nil
+}
+
+func HashCommit(treeHash, parentHash, author, message string) (string, []byte, error) {
 	// 1. Use a buffer to efficiently build the commit content.
 	var contentBuffer bytes.Buffer
 
 	// 2. Write the commit metadata.
 	// Fprintf is ideal for writing formatted text to an io.Writer like a buffer.
-	fmt.Fprintf(&contentBuffer, "parent %s\n", parentHash)
+	fmt.Fprintf(&contentBuffer, "tree %s\n", treeHash) // New: points to the tree object
+	if parentHash != "" { // Only add parent if it exists
+		fmt.Fprintf(&contentBuffer, "parent %s\n", parentHash)
+	}
 	fmt.Fprintf(&contentBuffer, "author %s\n", author)
 	// We use the ISO 8601 format (RFC3339 in Go) and UTC for consistency.
 	fmt.Fprintf(&contentBuffer, "date %s\n", time.Now().UTC().Format(time.RFC3339))
 
 	// 3. Write the commit message, separated by a blank line.
 	fmt.Fprintf(&contentBuffer, "\n%s\n", message)
-
-	// 4. Write the file list.
-	if len(files) > 0 {
-		// To ensure a deterministic commit hash, we must sort the files by their path.
-		// Maps in Go do not guarantee iteration order.
-		var paths []string
-		for path := range files {
-			paths = append(paths, path)
-		}
-		sort.Strings(paths) // Sort alphabetically.
-
-		fmt.Fprintf(&contentBuffer, "\nfiles:\n")
-		for _, path := range paths {
-			hash := files[path]
-			fmt.Fprintf(&contentBuffer, "%s %s\n", path, hash)
-		}
-	}
 
 	// The commit content is ready.
 	commitContent := contentBuffer.Bytes()
@@ -69,7 +85,6 @@ func HashCommit(parentHash, author, message string, files map[string]string) (st
 	var objectBuffer bytes.Buffer
 	// We write the header: "commit" type, a space, the content length, and a null byte.
 	fmt.Fprintf(&objectBuffer, "commit %d\000", len(commitContent))
-	// We write the content we just built.
 	objectBuffer.Write(commitContent)
 
 	// We calculate the SHA-1 hash of the complete object.
