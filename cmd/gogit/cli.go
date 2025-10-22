@@ -69,6 +69,18 @@ var addCommitCmd = &cobra.Command{
 	},
 }
 
+var logCmd = &cobra.Command{
+	Use:   "log",
+	Short: "Show commits logs",
+	Run: func(cmd *cobra.Command, args []string) {
+		// Here's the magic: the CLI calls the internal logic
+		if err := repo.LogRepo(); err != nil {
+			fmt.Fprintf(os.Stderr, "Error: %v\n", err)
+			os.Exit(1)
+		}
+	},
+}
+
 // Execute adds all child commands to the root command and sets flags appropriately.
 // This is the main function that calls main.main().
 func Execute() {
@@ -86,4 +98,5 @@ func init() {
 	rootCmd.AddCommand(addCommitCmd)
 	addCommitCmd.Flags().StringVarP(&commitMessage, "message", "m", "", "Commit message (mandatory)")
 	addCommitCmd.MarkFlagRequired("message")
+	rootCmd.AddCommand(logCmd)
 }

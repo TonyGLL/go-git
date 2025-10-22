@@ -14,3 +14,6 @@ add: build
 
 commit: build
 	./${APP_EXECUTABLE} commit -m "first commit"
+
+log: build
+	./${APP_EXECUTABLE} log
