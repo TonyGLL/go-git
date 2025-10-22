@@ -10,7 +10,7 @@ init: build
 	./${APP_EXECUTABLE} init
 
 add: build
-	./${APP_EXECUTABLE} add hello.txt
+	./${APP_EXECUTABLE} add .
 
 commit: build
 	./${APP_EXECUTABLE} commit -m "first commit"
