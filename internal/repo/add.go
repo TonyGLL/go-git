@@ -1,11 +1,9 @@
 package repo
 
 import (
-	"bufio"
 	"fmt"
 	"os"
 	"path/filepath"
-	"sort"
 	"strings"
 
 	"github.com/TonyGLL/go-git/pkg"
@@ -14,7 +12,7 @@ import (
 // Add handles adding files to the repository's index.
 func Add(path string) error {
 	// 1. Read the index file once into memory.
-	indexEntries, err := readIndex()
+	indexEntries, err := pkg.ReadIndex()
 	if err != nil {
 		return fmt.Errorf("error reading index: %w", err)
 	}
@@ -64,7 +62,7 @@ func Add(path string) error {
 	}
 
 	// 3. Write the updated index back to the file once.
-	if err := writeIndex(indexEntries); err != nil {
+	if err := pkg.WriteIndex(indexEntries); err != nil {
 		return fmt.Errorf("error writing index file: %w", err)
 	}
 
@@ -101,57 +99,5 @@ func processFile(filePath string, indexEntries map[string]string) error {
 
 	// Update the in-memory map
 	indexEntries[filePath] = blobHash
-	return nil
-}
-
-// readIndex reads the index file into a map.
-func readIndex() (map[string]string, error) {
-	indexEntries := make(map[string]string)
-	indexFile, err := os.Open(pkg.IndexPath)
-	if err != nil {
-		if os.IsNotExist(err) {
-			// File doesn't exist yet, return an empty map. It will be created on write.
-			return indexEntries, nil
-		}
-		return nil, fmt.Errorf("error opening index for reading: %w", err)
-	}
-	defer indexFile.Close()
-
-	scanner := bufio.NewScanner(indexFile)
-	for scanner.Scan() {
-		line := scanner.Text()
-		parts := strings.SplitN(line, " ", 2)
-		if len(parts) == 2 {
-			indexEntries[parts[1]] = parts[0] // map[filepath] = hash
-		}
-	}
-	if err := scanner.Err(); err != nil {
-		return nil, fmt.Errorf("error scanning index file: %w", err)
-	}
-	return indexEntries, nil
-}
-
-// writeIndex writes the map of entries to the index file.
-func writeIndex(indexEntries map[string]string) error {
-	var lines []string
-	// For deterministic output, sort the file paths before writing.
-	var paths []string
-	for path := range indexEntries {
-		paths = append(paths, path)
-	}
-	sort.Strings(paths)
-
-	for _, path := range paths {
-		lines = append(lines, fmt.Sprintf("%s %s", indexEntries[path], path))
-	}
-
-	output := strings.Join(lines, "\n")
-	if len(lines) > 0 {
-		output += "\n" // Add a final newline
-	}
-
-	if err := os.WriteFile(pkg.IndexPath, []byte(output), 0644); err != nil {
-		return fmt.Errorf("error writing to index file %s: %w", pkg.IndexPath, err)
-	}
 	return nil
 }

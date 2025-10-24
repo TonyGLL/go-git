@@ -6,54 +6,23 @@ import (
 	"log"
 	"os"
 	"path/filepath"
-	"strings"
 
 	"github.com/TonyGLL/go-git/pkg"
 )
 
 func AddCommit(message *string) error {
-	hashPathMap := make(map[string]string)
-
-	file, err := os.Open(pkg.IndexPath)
+	indexMap, err := pkg.ReadIndex()
 	if err != nil {
 		return err
 	}
-	defer file.Close()
 
-	// 3. Create a scanner to read the file line by line
-	scanner := bufio.NewScanner(file)
-
-	// 4. Iterate over each line of the file
-	for scanner.Scan() {
-		line := scanner.Text() // Get the line as a string
-
-		// 5. Split the line into a slice of words
-		words := strings.Fields(line)
-
-		// 6. Check that there are at least two words
-		if len(words) < 2 {
-			log.Printf("Skipping line with incorrect format 0: %s", line)
-			continue // Go to the next line if the format is incorrect
-		}
-
-		// 7. Assign the first word as key and the second as value
-		key := words[0]
-		value := words[1]
-		hashPathMap[key] = value
-	}
-
-	if len(hashPathMap) < 1 {
+	if len(indexMap) < 1 {
 		log.Printf("No file to commit")
 		return nil
 	}
 
-	// 8. Check for errors during scanning
-	if err := scanner.Err(); err != nil {
-		return fmt.Errorf("error scanning index file: %w", err)
-	}
-
 	// --- Generate and save the Tree object ---
-	treeHash, treeContent, err := pkg.HashTree(hashPathMap)
+	treeHash, treeContent, err := pkg.HashTree(indexMap)
 	if err != nil {
 		return fmt.Errorf("error hashing tree: %w", err)
 	}
@@ -73,38 +42,9 @@ func AddCommit(message *string) error {
 	}
 	// --- End Tree object generation ---
 
-
-	headRef := make(map[string]string)
-	ref, err := os.Open(pkg.HeadPath)
+	headRef, err := pkg.GetHeadRef()
 	if err != nil {
 		return err
-	}
-	defer ref.Close()
-
-	// 3. Create a scanner to read the file line by line
-	scannerRef := bufio.NewScanner(ref)
-
-	// 4. Iterate over each line of the file
-	for scannerRef.Scan() {
-		line := scannerRef.Text() // Get the line as a string
-
-		// 5. Split the line into a slice of words
-		words := strings.Fields(line)
-
-		// 6. Check that there are at least two words
-		if len(words) < 2 {
-			log.Printf("Skipping line with incorrect format 1: %s", line)
-			continue // Go to the next line if the format is incorrect
-		}
-
-		key := words[0]
-		value := words[1]
-		headRef[key] = value
-	}
-
-	// 8. Check for errors during scanning
-	if err := scannerRef.Err(); err != nil {
-		return fmt.Errorf("error scanning HEAD file: %w", err)
 	}
 
 	var parentCommitHash string
@@ -128,7 +68,6 @@ func AddCommit(message *string) error {
 			return fmt.Errorf("error scanning branch ref file: %w", err)
 		}
 	}
-
 
 	authorName := "TonyGLL"
 	// Call HashCommit with the treeHash
