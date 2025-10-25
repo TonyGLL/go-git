@@ -1,4 +1,4 @@
-package pkg
+package gogit
 
 import "time"
 

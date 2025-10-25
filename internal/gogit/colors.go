@@ -1,4 +1,4 @@
-package pkg
+package gogit
 
 const (
 	ColorReset  = "\033[0m"

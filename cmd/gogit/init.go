@@ -1,10 +1,10 @@
-package commands
+package gogit
 
 import (
 	"fmt"
 	"os"
 
-	"github.com/TonyGLL/go-git/internal/repo"
+	"github.com/TonyGLL/go-git/internal/gogit"
 	"github.com/spf13/cobra"
 )
 
@@ -18,7 +18,7 @@ var initCmd = &cobra.Command{
 			targetDir = args[0]
 		}
 
-		if err := repo.InitRepo(targetDir); err != nil {
+		if err := gogit.InitRepo(targetDir); err != nil {
 			fmt.Fprintf(os.Stderr, "Error: %v\n", err)
 			os.Exit(1)
 		}
