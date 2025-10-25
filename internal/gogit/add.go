@@ -5,11 +5,14 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
-
 )
 
 // Add handles adding files to the repository's index.
 func Add(path string) error {
+	ignorePatterns, err := readGogitignore()
+	if err != nil {
+		return fmt.Errorf("error reading .gogitignore: %w", err)
+	}
 	// 1. Read the index file once into memory.
 	indexEntries, err := ReadIndex()
 	if err != nil {
@@ -30,12 +33,21 @@ func Add(path string) error {
 			if info.IsDir() && info.Name() == ".git" {
 				return filepath.SkipDir
 			}
-			// Ignore other directories
-			if info.IsDir() {
-				return nil
+
+			// Check against .gogitignore patterns
+			ignored, err := isIgnored(filePath, ignorePatterns)
+			if err != nil {
+				return fmt.Errorf("error checking ignore patterns for %s: %w", filePath, err)
+			}
+			if ignored {
+				if info.IsDir() {
+					return filepath.SkipDir // Skip directory and its contents
+				}
+				return nil // Skip file
 			}
 
-			if info.Name() == ".gogitignore" {
+			// Ignore other directories (that are not explicitly ignored by .gogitignore)
+			if info.IsDir() {
 				return nil
 			}
 

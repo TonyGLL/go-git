@@ -50,6 +50,13 @@ func InitRepo(path string) error {
 		return fmt.Errorf("error creating main file: %w", err)
 	}
 
+	// Create .gogitignore file
+	gogitignorePath := filepath.Join(path, ".gogitignore")
+	gogitignoreContent := []byte("")
+	if err := os.WriteFile(gogitignorePath, gogitignoreContent, 0644); err != nil {
+		return fmt.Errorf("error creating .gogitignore file: %w", err)
+	}
+
 	fmt.Println("Repository initialized successfully!")
 	return nil
 }

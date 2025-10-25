@@ -5,6 +5,11 @@ import (
 )
 
 func StatusRepo() error {
+	ignorePatterns, err := readGogitignore()
+	if err != nil {
+		return fmt.Errorf("error reading .gogitignore: %w", err)
+	}
+
 	currentHash, err := GetBranchHash()
 	if err != nil {
 		return err
@@ -54,7 +59,18 @@ func StatusRepo() error {
 		return fmt.Errorf("no se pudo construir el mapa del directorio de trabajo: %w", err)
 	}
 
-	for path, workdirHash := range workdirMap {
+	filteredWorkdirMap := make(map[string]string)
+	for path, hash := range workdirMap {
+		ignored, err := isIgnored(path, ignorePatterns)
+		if err != nil {
+			return fmt.Errorf("error checking ignore patterns for %s: %w", path, err)
+		}
+		if !ignored {
+			filteredWorkdirMap[path] = hash
+		}
+	}
+
+	for path, workdirHash := range filteredWorkdirMap {
 		indexHash, existsInIndex := indexMap[path]
 		if !existsInIndex {
 			// Caso C: Untracked
