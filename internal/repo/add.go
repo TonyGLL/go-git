@@ -28,6 +28,9 @@ func Add(path string) error {
 			if info.IsDir() && info.Name() == ".gogit" {
 				return filepath.SkipDir
 			}
+			if info.IsDir() && info.Name() == ".git" {
+				return filepath.SkipDir
+			}
 			// Ignore other directories
 			if info.IsDir() {
 				return nil
