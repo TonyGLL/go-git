@@ -1,36 +1,34 @@
-package repo
+package gogit
 
 import (
 	"fmt"
-
-	"github.com/TonyGLL/go-git/pkg"
 )
 
 func StatusRepo() error {
-	currentHash, err := pkg.GetBranchHash()
+	currentHash, err := GetBranchHash()
 	if err != nil {
 		return err
 	}
 
 	var treeMap map[string]string
 	if currentHash != "" {
-		lastCommit, err := pkg.ReadCommit(currentHash)
+		lastCommit, err := ReadCommit(currentHash)
 		if err != nil {
 			return err
 		}
 
 		lastTreeHash := lastCommit.Tree
-		treeMap, err = pkg.ReadTree(lastTreeHash)
+		treeMap, err = ReadTree(lastTreeHash)
 		if err != nil {
 			return err
 		}
 	}
 
-	indexMap, err := pkg.ReadIndex()
+	indexMap, err := ReadIndex()
 	if err != nil {
 		return err
 	}
-	statusInfo := &pkg.StatusInfo{
+	statusInfo := &StatusInfo{
 		Branch:    "main",
 		Staged:    []string{},
 		Unstaged:  []string{},
@@ -51,7 +49,7 @@ func StatusRepo() error {
 		}
 	}
 
-	workdirMap, err := pkg.BuildWorkdirMap()
+	workdirMap, err := BuildWorkdirMap()
 	if err != nil {
 		return fmt.Errorf("no se pudo construir el mapa del directorio de trabajo: %w", err)
 	}
@@ -73,7 +71,7 @@ func StatusRepo() error {
 		}
 	}
 
-	pkg.PrintStatus(statusInfo)
+	PrintStatus(statusInfo)
 
 	return nil
 }

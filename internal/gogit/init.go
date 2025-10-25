@@ -1,4 +1,4 @@
-package repo
+package gogit
 
 import (
 	"fmt"

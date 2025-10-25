@@ -1,4 +1,4 @@
-package repo
+package gogit
 
 import (
 	"fmt"
@@ -6,13 +6,12 @@ import (
 	"path/filepath"
 	"strings"
 
-	"github.com/TonyGLL/go-git/pkg"
 )
 
 // Add handles adding files to the repository's index.
 func Add(path string) error {
 	// 1. Read the index file once into memory.
-	indexEntries, err := pkg.ReadIndex()
+	indexEntries, err := ReadIndex()
 	if err != nil {
 		return fmt.Errorf("error reading index: %w", err)
 	}
@@ -69,7 +68,7 @@ func Add(path string) error {
 	}
 
 	// 3. Write the updated index back to the file once.
-	if err := pkg.WriteIndex(indexEntries); err != nil {
+	if err := WriteIndex(indexEntries); err != nil {
 		return fmt.Errorf("error writing index file: %w", err)
 	}
 
@@ -83,19 +82,19 @@ func processFile(filePath string, indexEntries map[string]string) error {
 		return fmt.Errorf("error reading file %s: %w", filePath, err)
 	}
 
-	blobHash, buffer, err := pkg.HashObject(content)
+	blobHash, buffer, err := HashObject(content)
 	if err != nil {
 		return fmt.Errorf("error hashing file: %w", err)
 	}
 
 	firstTwo := blobHash[:2]
 	rest := blobHash[2:]
-	objectPath := filepath.Join(pkg.ObjectsPath, firstTwo, rest)
+	objectPath := filepath.Join(ObjectsPath, firstTwo, rest)
 
 	// Check if object exists. If not, create it.
 	if _, err := os.Stat(objectPath); os.IsNotExist(err) {
-		if err := os.MkdirAll(filepath.Join(pkg.ObjectsPath, firstTwo), 0755); err != nil {
-			return fmt.Errorf("error creating directory %s: %w", filepath.Join(pkg.ObjectsPath, firstTwo), err)
+		if err := os.MkdirAll(filepath.Join(ObjectsPath, firstTwo), 0755); err != nil {
+			return fmt.Errorf("error creating directory %s: %w", filepath.Join(ObjectsPath, firstTwo), err)
 		}
 		if err := os.WriteFile(objectPath, buffer.Bytes(), 0644); err != nil {
 			return fmt.Errorf("error writing blob object to %s: %w", objectPath, err)
