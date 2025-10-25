@@ -62,7 +62,7 @@ func HashCommit(treeHash, parentHash, author, message string) (string, []byte, e
 	// 2. Write the commit metadata.
 	// Fprintf is ideal for writing formatted text to an io.Writer like a buffer.
 	fmt.Fprintf(&contentBuffer, "tree %s\n", treeHash) // New: points to the tree object
-	if parentHash != "" { // Only add parent if it exists
+	if parentHash != "" {                              // Only add parent if it exists
 		fmt.Fprintf(&contentBuffer, "parent %s\n", parentHash)
 	}
 	fmt.Fprintf(&contentBuffer, "author %s\n", author)

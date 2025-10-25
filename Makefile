@@ -17,3 +17,6 @@ commit: build
 
 log: build
 	./${APP_EXECUTABLE} log
+
+status: build
+	./${APP_EXECUTABLE} status

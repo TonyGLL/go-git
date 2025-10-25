@@ -11,3 +11,10 @@ type Commit struct {
 	Date    time.Time
 	Message string
 }
+
+type StatusInfo struct {
+	Branch    string
+	Staged    []string
+	Unstaged  []string
+	Untracked []string
+}
