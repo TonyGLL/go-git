@@ -27,7 +27,7 @@ func PrintStatus(statusInfo *StatusInfo) {
 		fmt.Println("\nChanges to be committed:")
 		fmt.Println("  (use \"go-git reset <file>...\" to unstage)") // Cambia "go-git" por el nombre de tu app
 		for _, file := range statusInfo.Staged {
-			fmt.Printf("%s\tmodified:   %s%s\n", ColorGreen, file, ColorReset)
+			fmt.Printf("%s\t%s%s\n", ColorGreen, file, ColorReset)
 		}
 	}
 
@@ -37,7 +37,7 @@ func PrintStatus(statusInfo *StatusInfo) {
 		fmt.Println("\nChanges not staged for commit:")
 		fmt.Println("  (use \"go-git add <file>...\" to update what will be committed)") // Cambia "go-git" por el nombre de tu app
 		for _, file := range statusInfo.Unstaged {
-			fmt.Printf("%s\tmodified:   %s%s\n", ColorRed, file, ColorReset)
+			fmt.Printf("%s\t%s%s\n", ColorRed, file, ColorReset)
 		}
 	}
 
@@ -47,7 +47,7 @@ func PrintStatus(statusInfo *StatusInfo) {
 		fmt.Println("\nUntracked files:")
 		fmt.Println("  (use \"go-git add <file>...\" to include in what will be committed)") // Cambia "go-git" por el nombre de tu app
 		for _, file := range statusInfo.Untracked {
-			fmt.Printf("%s\t%s%s\n", ColorRed, file, ColorReset)
+			fmt.Printf("%s        %s%s\n", ColorRed, file, ColorReset)
 		}
 	}
 

@@ -97,10 +97,10 @@ func AddCommit(message *string) error {
 	}
 
 	// Clear the index after a successful commit
-	err = os.WriteFile(pkg.IndexPath, []byte(""), 0644)
-	if err != nil {
-		return fmt.Errorf("error clearing index file: %w", err)
-	}
+	// err = os.WriteFile(pkg.IndexPath, []byte(""), 0644)
+	// if err != nil {
+	// 	return fmt.Errorf("error clearing index file: %w", err)
+	// }
 
 	return nil
 }

@@ -32,9 +32,9 @@ func StatusRepo() error {
 	}
 	statusInfo := &pkg.StatusInfo{
 		Branch:    "main",
-		Staged:    []string{""},
-		Unstaged:  []string{""},
-		Untracked: []string{""},
+		Staged:    []string{},
+		Unstaged:  []string{},
+		Untracked: []string{},
 	}
 
 	for path, indexHash := range indexMap {

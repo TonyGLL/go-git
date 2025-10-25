@@ -36,6 +36,10 @@ func Add(path string) error {
 				return nil
 			}
 
+			if info.Name() == ".gogitignore" {
+				return nil
+			}
+
 			// Normalize path for consistent checks
 			normalizedPath := filepath.ToSlash(filePath)
 			if strings.HasPrefix(normalizedPath, ".gogit/") {
