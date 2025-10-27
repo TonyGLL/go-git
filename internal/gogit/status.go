@@ -56,7 +56,7 @@ func StatusRepo() error {
 
 	workdirMap, err := BuildWorkdirMap()
 	if err != nil {
-		return fmt.Errorf("no se pudo construir el mapa del directorio de trabajo: %w", err)
+		return fmt.Errorf("could not build the working directory map: %w", err)
 	}
 
 	filteredWorkdirMap := make(map[string]string)
@@ -73,14 +73,14 @@ func StatusRepo() error {
 	for path, workdirHash := range filteredWorkdirMap {
 		indexHash, existsInIndex := indexMap[path]
 		if !existsInIndex {
-			// Caso C: Untracked
+			// Case C: Untracked
 			statusInfo.Untracked = append(statusInfo.Untracked, path)
 		} else if workdirHash != indexHash {
-			// Caso D: Modificado Unstaged
+			// Case D: Modified Unstaged
 			statusInfo.Unstaged = append(statusInfo.Unstaged, fmt.Sprintf("modified:   %s", path))
 		}
 	}
-	// Itera sobre el index para encontrar borrados unstaged
+	// Iterate over the index to find unstaged deletions
 	for path := range indexMap {
 		if _, existsInWorkdir := workdirMap[path]; !existsInWorkdir {
 			statusInfo.Unstaged = append(statusInfo.Unstaged, fmt.Sprintf("deleted:    %s", path))
