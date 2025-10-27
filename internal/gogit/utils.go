@@ -134,52 +134,52 @@ func GetBranchHash() (string, error) {
 	return currentHash, nil
 }
 
-// BuildWorkdirMap recorre repoRoot y devuelve un map rutaRel -> sha1hex
+// BuildWorkdirMap walks the repoRoot and returns a map of relative path -> sha1hex.
 func BuildWorkdirMap() (map[string]string, error) {
 	repoRoot, err := os.Getwd()
 	if err != nil {
-		log.Fatalf("No se pudo obtener el directorio actual: %v", err)
+		log.Fatalf("could not get the current directory: %v", err)
 	}
 	workdirMap := make(map[string]string)
 
-	// 1. Cargar las reglas de .gogitignore
+	// 1. Load the .gogitignore rules.
 	ignorePatterns, err := parseGitignore(repoRoot)
 	if err != nil {
 		return nil, err
 	}
 
-	// 2. Iniciar el recorrido recursivo
+	// 2. Start the recursive walk.
 	walkErr := filepath.WalkDir(repoRoot, func(path string, d fs.DirEntry, err error) error {
 		if err != nil {
 			return err
 		}
 
-		// Obtener la ruta relativa a la raíz del repositorio
+		// Get the relative path to the repository root.
 		relativePath, err := filepath.Rel(repoRoot, path)
 		if err != nil {
 			return err
 		}
-		// Normalizar a forward slashes para comparación consistente
+		// Normalize to forward slashes for consistent comparison.
 		relativePath = filepath.ToSlash(relativePath)
 
-		// Saltar la raíz (".")
+		// Skip the root (".").
 		if relativePath == "." {
 			return nil
 		}
 
-		// Ignorar el propio archivo .gogitignore
+		// Ignore the .gogitignore file itself.
 		if !d.IsDir() && filepath.Base(relativePath) == ".gogitignore" {
 			return nil
 		}
 
-		// Filtro Estricto: ignorar siempre el directorio .gogit
+		// Strict Filter: always ignore the .gogit directory.
 		if d.IsDir() && (relativePath == ".gogit" || strings.HasPrefix(relativePath, ".gogit/")) {
 			return filepath.SkipDir
 		}
 
-		// Evaluar las reglas de ignore (se aplican en orden; las negaciones '!' deshacen ignores previos)
+		// Evaluate ignore rules (they are applied in order; '!' negations undo previous ignores).
 		isIgnored := false
-		name := d.Name() // nombre del archivo/dir
+		name := d.Name() // name of the file/dir
 		isDir := d.IsDir()
 
 		for _, rawPattern := range ignorePatterns {
@@ -194,12 +194,12 @@ func BuildWorkdirMap() (map[string]string, error) {
 				pattern = strings.TrimPrefix(pattern, "!")
 				pattern = strings.TrimSpace(pattern)
 				if pattern == "" {
-					// patrón "!" inválido -> ignorar
+					// invalid "!" pattern -> ignore
 					continue
 				}
 			}
 
-			// Si el pattern termina en "/" significa que apunta a directorios
+			// If the pattern ends in "/" it points to directories.
 			patternDirOnly := strings.HasSuffix(pattern, "/")
 			if patternDirOnly {
 				pattern = strings.TrimSuffix(pattern, "/")
@@ -207,21 +207,21 @@ func BuildWorkdirMap() (map[string]string, error) {
 
 			matched := false
 
-			// Si el pattern contiene una '/' hacemos la comparación contra la ruta relativa completa
+			// If the pattern contains a '/' we compare it against the full relative path.
 			if strings.Contains(pattern, "/") {
-				// si pattern empieza con "/" lo tratamos como relativo a la raíz: eliminamos prefijo si existe
+				// if pattern starts with "/" we treat it as relative to the root: remove prefix if it exists
 				if strings.HasPrefix(pattern, "/") {
 					pattern = strings.TrimPrefix(pattern, "/")
 				}
-				// Match usando filepath.Match contra relativePath
+				// Match using filepath.Match against relativePath
 				if ok, matchErr := filepath.Match(pattern, relativePath); matchErr == nil && ok {
 					matched = true
 				} else if matchErr != nil {
-					// patrón inválido — lo ignoramos
+					// invalid pattern — we ignore it
 					continue
 				}
 			} else {
-				// no contiene '/', comparar contra el nombre del archivo/dir
+				// does not contain '/', compare against the name of the file/dir
 				if ok, matchErr := filepath.Match(pattern, name); matchErr == nil && ok {
 					matched = true
 				} else if matchErr != nil {
@@ -229,23 +229,23 @@ func BuildWorkdirMap() (map[string]string, error) {
 				}
 			}
 
-			// Si el patrón es exclusivo para directorios, y esto no es un dir -> no match
+			// If the pattern is exclusive to directories, and this is not a dir -> no match
 			if matched && patternDirOnly && !isDir {
 				matched = false
 			}
 
 			if matched {
 				if negated {
-					// Una negación deshace el estado de ignore
+					// A negation undoes the ignore state.
 					isIgnored = false
 				} else {
 					isIgnored = true
 				}
-				// No rompemos; git procesa todas las líneas (última coincidencia relevante)
+				// We don't break; git processes all lines (last relevant match).
 			}
 		}
 
-		// Si está ignorado -> si es dir, evitar entrar; si es archivo, omitirlo.
+		// If it's ignored -> if it's a dir, avoid entering; if it's a file, skip it.
 		if isIgnored {
 			if d.IsDir() {
 				return filepath.SkipDir
@@ -253,59 +253,59 @@ func BuildWorkdirMap() (map[string]string, error) {
 			return nil
 		}
 
-		// Si es un directorio válido no hacemos nada (solo archivos se hashean)
+		// If it's a valid directory, we do nothing (only files are hashed).
 		if d.IsDir() {
 			return nil
 		}
 
-		// 3. Procesar y hashear cada archivo válido
+		// 3. Process and hash each valid file.
 		content, err := os.ReadFile(path)
 		if err != nil {
-			return fmt.Errorf("no se pudo leer el archivo %s: %w", path, err)
+			return fmt.Errorf("could not read the file %s: %w", path, err)
 		}
 
-		// Crear encabezado "blob <tamaño>\0"
+		// Create a "blob <size>\0" header.
 		header := fmt.Sprintf("blob %d\x00", len(content))
 
-		// Concatenar y hashear
+		// Concatenate and hash.
 		hasher := sha1.New()
 		_, _ = hasher.Write([]byte(header))
 		_, _ = hasher.Write(content)
 		hashBytes := hasher.Sum(nil)
 
-		// Convertir a hexadecimal y almacenar
+		// Convert to hexadecimal and store.
 		hashHex := hex.EncodeToString(hashBytes)
-		// Guardar con la ruta relativa (sin "./")
+		// Save with the relative path (without "./").
 		workdirMap[relativePath] = hashHex
 
 		return nil
 	})
 
 	if walkErr != nil {
-		return nil, fmt.Errorf("error durante el recorrido del directorio: %w", walkErr)
+		return nil, fmt.Errorf("error during the directory walk: %w", walkErr)
 	}
 
 	return workdirMap, nil
 }
 
-// parseGitignore lee .gogitignore y devuelve las líneas en orden (incluye negaciones)
+// parseGitignore reads .gogitignore and returns the lines in order (including negations).
 func parseGitignore(repoRoot string) ([]string, error) {
 	ignoreFilePath := filepath.Join(repoRoot, ".gogitignore")
 
 	content, err := os.ReadFile(ignoreFilePath)
 	if err != nil {
-		// Si no hay .gogitignore, no es un error, simplemente no hay nada que ignorar.
+		// If there is no .gogitignore, it is not an error, there is simply nothing to ignore.
 		if os.IsNotExist(err) {
 			return []string{}, nil
 		}
-		return nil, fmt.Errorf("error al leer .gogitignore: %w", err)
+		return nil, fmt.Errorf("error reading .gogitignore: %w", err)
 	}
 
 	var patterns []string
 	lines := strings.Split(string(content), "\n")
 	for _, line := range lines {
 		trimmedLine := strings.TrimSpace(line)
-		// Ignorar líneas vacías y comentarios
+		// Ignore empty lines and comments.
 		if trimmedLine == "" || strings.HasPrefix(trimmedLine, "#") {
 			continue
 		}
